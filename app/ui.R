@@ -2,7 +2,6 @@
 library(shiny)
 library(shinyWidgets)
 library(wordcloud2)
-
 ui <- fluidPage(
   titlePanel("Reddit Gender Discourse Analysis"),
   sidebarLayout(
@@ -15,11 +14,10 @@ ui <- fluidPage(
     ),
     mainPanel(
       tabsetPanel(type = "tabs",
-                  tabPanel("Summary", verbatimTextOutput("summaryOutput")),
-                  tabPanel("Word Cloud", htmlOutput("wordCloudOutput")),
+                  tabPanel("Summary", tableOutput("summaryOutput")),
+                  tabPanel("Word Cloud", wordcloud2Output("wordCloudOutput")),
                   tabPanel("Sentiment Analysis", plotOutput("sentimentPlot"))
       )
     )
   )
 )
-
