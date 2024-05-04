@@ -1,10 +1,9 @@
-library(shiny)
-library(wordcloud2)
-library(tm)
-library(wordcloud)
-library(syuzhet) 
-
-server <- function(input, output) {
+server <- function(input, output, session) {
+  posts_women <- readRDS("posts_women.rds")
+  posts_men <- readRDS("posts_men.rds")
+  posts_neutral <- readRDS("posts_neutral.rds")
+  
+  # reactive data frame that depends on the input
   data_selected <- reactive({
     switch(input$subreddit,
            "Feminism" = posts_women[["Feminism"]],
@@ -16,51 +15,36 @@ server <- function(input, output) {
            "MensLib" = posts_men[["MensLib"]],
            "news" = posts_neutral[["news"]],
            "worldnews" = posts_neutral[["worldnews"]],
-           "AskReddit" = posts_neutral[["AskReddit"]],
-           NULL)
+           "AskReddit" = posts_neutral[["AskReddit"]])
   })
   
-  #summary section
-  output$summaryOutput <- renderPrint({
+  # Summary output
+  output$summaryOutput <- renderTable({
     req(data_selected())
     data <- data_selected()
-    paste("Total Posts: ", nrow(data),
-          "\nAverage Score: ", mean(data$score, na.rm = TRUE),
-          "\nAverage Number of Comments: ", mean(data$num_comments, na.rm = TRUE))
+    summary_data <- data.frame(
+      Total_Posts = nrow(data),
+      Average_Score = round(mean(as.numeric(data$score), na.rm = TRUE), 2),
+      Average_Number_of_Comments = round(mean(as.numeric(data$num_comments), na.rm = TRUE), 2)
+    )
+    
+    colnames(summary_data) <- c("Total Posts", "Average Score", "Average Number of Comments")
+    
+    summary_data
   })
   
-  #wordcloud
+  
+  # Wordcloud output
   output$wordCloudOutput <- renderWordcloud2({
-    req(data_selected()) 
-    data <- data_selected()
-    
-    if (is.null(data) || nrow(data) == 0) {
-      return("No data to display.")
+    req(input$subreddit)
+    word_freq_df <- precomputed_freqs[[input$subreddit]]
+    if (is.null(word_freq_df) || nrow(word_freq_df) == 0 || !is.numeric(word_freq_df$freq)) {
+      return("No data to display or data is not numeric.")
     }
-    
-    text <- tolower(data$title) 
-    
-    docs <- Corpus(VectorSource(text))
-    
-    docs <- tm_map(docs, content_transformer(tolower))
-    docs <- tm_map(docs, removePunctuation)
-    docs <- tm_map(docs, removeWords, stopwords("english"))  
-    
-    tdm <- TermDocumentMatrix(docs)
-    
-    tdm_df <- as.data.frame(as.matrix(tdm))
-    
-    word_freq_df <- data.frame(word = rownames(tdm_df), freq = rowSums(tdm_df, na.rm = TRUE))
-    
-    word_freq_df <- word_freq_df[order(word_freq_df$freq, decreasing = TRUE), ]
-    
-    wordcloud(words = word_freq_df$word, freq = word_freq_df$freq, min.freq = 1,
-              max.words = 200, random.order = FALSE, rot.per = 0.35, 
-              colors = brewer.pal(8, "Set1"))
+    wordcloud2(word_freq_df, size = 1)
   })
   
-  
-  #sentiment graph 
+  # Sentiment analysis
   output$sentimentPlot <- renderPlot({
     req(data_selected())
     data <- data_selected()
