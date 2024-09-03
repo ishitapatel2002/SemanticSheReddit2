@@ -9,4 +9,4 @@ Features
 
 The application utilizes data fetched from the PullPush.io API, which aggregates historical Reddit submissions and comments.
 
-By : Ishita Patel and Manan Thakkar
+By : Ishita Patel
